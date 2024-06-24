@@ -1,3 +1,5 @@
+USE VAREJO_DW;
+
 -- 1. Quantidade de vendas agrupada por tipo e categoria
 SELECT dp.tipo, dp.categoria, SUM(fv.quantidade) AS quantidade_vendas
 FROM fact_vendas fv

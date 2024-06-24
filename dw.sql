@@ -4,7 +4,7 @@ CREATE DATABASE VAREJO_DW;
 
 USE VAREJO_DW;
 
--- Tabelas Dimensionais
+--- Tabela Dimensional de Tempo
 CREATE TABLE dim_tempo (
     tempo_id INT PRIMARY KEY AUTO_INCREMENT,
     data DATE,
@@ -15,6 +15,7 @@ CREATE TABLE dim_tempo (
     semestre INT
 );
 
+-- Tabela Dimensional de Localidade
 CREATE TABLE dim_localidade (
     localidade_id INT PRIMARY KEY AUTO_INCREMENT,
     uf VARCHAR(2),
@@ -22,6 +23,7 @@ CREATE TABLE dim_localidade (
     endereco VARCHAR(255)
 );
 
+-- Tabela Dimensional de Produto
 CREATE TABLE dim_produto (
     produto_id INT PRIMARY KEY AUTO_INCREMENT,
     tipo VARCHAR(255),
@@ -29,6 +31,7 @@ CREATE TABLE dim_produto (
     descricao VARCHAR(255)
 );
 
+-- Tabela Dimensional de Funcionário
 CREATE TABLE dim_funcionario (
     funcionario_id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(255),
@@ -41,6 +44,7 @@ CREATE TABLE dim_funcionario (
     loja_id INT
 );
 
+-- Tabela Dimensional de Cliente
 CREATE TABLE dim_cliente (
     cliente_id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(255),
@@ -49,7 +53,8 @@ CREATE TABLE dim_cliente (
     fone_celular VARCHAR(255)
 );
 
--- Tabelas de Fatos
+
+-- Tabela Fato de Vendas
 CREATE TABLE fact_vendas (
     venda_id INT PRIMARY KEY AUTO_INCREMENT,
     tempo_id INT,
@@ -67,6 +72,7 @@ CREATE TABLE fact_vendas (
     FOREIGN KEY (cliente_id) REFERENCES dim_cliente(cliente_id)
 );
 
+-- Tabela Fato de Atendimentos
 CREATE TABLE fact_atendimentos (
     atendimento_id INT PRIMARY KEY AUTO_INCREMENT,
     tempo_id INT,
