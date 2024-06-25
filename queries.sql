@@ -28,16 +28,25 @@ JOIN dim_funcionario df ON fa.funcionario_id = df.funcionario_id
 JOIN dim_localidade dl ON fa.localidade_id = dl.localidade_id
 GROUP BY df.nome, dl.uf, dl.cidade;
 
--- 5. Valor das últimas vendas realizadas por cliente
-SELECT dc.nome, fv.valor_total, fv.data
-FROM fact_vendas fv
+-- 5. Valor das últimas (3) vendas realizadas por cliente
+SELECT
+    dc.nome,
+    fv.valor_total,
+    dt.data
+FROM (
+    SELECT
+        fv.cliente_id,
+        fv.valor_total,
+        fv.tempo_id,
+        ROW_NUMBER() OVER (PARTITION BY fv.cliente_id ORDER BY dt.data DESC) AS rn
+    FROM fact_vendas fv
+    JOIN dim_tempo dt ON fv.tempo_id = dt.tempo_id
+) fv
 JOIN dim_cliente dc ON fv.cliente_id = dc.cliente_id
-WHERE fv.data = (
-    SELECT MAX(fv2.data)
-    FROM fact_vendas fv2
-    WHERE fv2.cliente_id = fv.cliente_id
-)
-ORDER BY dc.nome;
+JOIN dim_tempo dt ON fv.tempo_id = dt.tempo_id
+WHERE fv.rn <= 3
+ORDER BY dc.nome, dt.data DESC;
+
 
 -- 6. Clientes que mais compraram na loja virtual com valor acumulado por período
 SELECT dc.nome, dt.ano, dt.mes, SUM(fv.valor_total) AS valor_acumulado

@@ -28,7 +28,8 @@ CREATE TABLE dim_produto (
     produto_id INT PRIMARY KEY AUTO_INCREMENT,
     tipo VARCHAR(255),
     categoria VARCHAR(255),
-    descricao VARCHAR(255)
+    descricao VARCHAR(255),
+    tb012_cod_produto INT
 );
 
 -- Tabela Dimensional de Funcionário
@@ -62,8 +63,8 @@ CREATE TABLE fact_vendas (
     funcionario_id INT,
     cliente_id INT,
     quantidade INT,
-    valor_unitario NUMERIC(12, 4),
-    valor_total NUMERIC(12, 4),
+    valor_unitario NUMERIC(12, 2),
+    valor_total NUMERIC(12, 2),
     FOREIGN KEY (tempo_id) REFERENCES dim_tempo(tempo_id),
     FOREIGN KEY (localidade_id) REFERENCES dim_localidade(localidade_id),
     FOREIGN KEY (produto_id) REFERENCES dim_produto(produto_id),
@@ -138,7 +139,7 @@ FROM
 
 -- Inserir dados na tabela dim_produto
 INSERT INTO
-    dim_produto (tipo, categoria, descricao)
+    dim_produto (tipo, categoria, descricao, tb012_cod_produto)
 SELECT
     'Alimento' AS tipo,
     c.tb013_descricao AS categoria,
@@ -152,7 +153,8 @@ SELECT
         IFNULL(a.tb014_num_lote, 'n/a'),
         ' ',
         IFNULL(a.tb014_data_vencimento, 'n/a')
-    ) AS descricao
+    ) AS descricao,
+    p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb014_prd_alimentos a
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON a.tb012_cod_produto = p.tb012_cod_produto
@@ -169,7 +171,8 @@ SELECT
         IFNULL(e.tb015_tensao, 'n/a'),
         ' ',
         IFNULL(e.tb015_nivel_consumo_procel, 'n/a')
-    ) AS descricao
+    ) AS descricao,
+    p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb015_prd_eletros e
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON e.tb012_cod_produto = p.tb012_cod_produto
@@ -188,7 +191,8 @@ SELECT
         IFNULL(v.tb016_tamanho, 'n/a'),
         ' ',
         IFNULL(v.tb016_numeracao, 'n/a')
-    ) AS descricao
+    ) AS descricao,
+    p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb016_prd_vestuarios v
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON v.tb012_cod_produto = p.tb012_cod_produto
@@ -252,8 +256,9 @@ SELECT
 FROM
     VAREJO_RELACIONAL.tb010_012_vendas v
     JOIN dim_tempo t ON v.tb010_012_data = t.data
-    JOIN VAREJO_RELACIONAL.tb012_produtos p2 ON v.tb012_cod_produto = p2.tb012_cod_produto
-    JOIN dim_produto p ON p.descricao = p2.tb012_descricao
+    JOIN (
+        SELECT DISTINCT dp.tb012_cod_produto, MIN(dp.produto_id) AS produto_id FROM dim_produto dp GROUP BY dp.tb012_cod_produto
+    ) p ON p.tb012_cod_produto = v.tb012_cod_produto
     JOIN VAREJO_RELACIONAL.tb005_funcionarios f2 ON v.tb005_matricula = f2.tb005_matricula
     JOIN VAREJO_RELACIONAL.tb004_lojas l ON f2.tb004_cod_loja = l.tb004_cod_loja
     JOIN VAREJO_RELACIONAL.tb003_enderecos e ON l.tb003_cod_endereco = e.tb003_cod_endereco
@@ -291,7 +296,7 @@ FROM
         IFNULL(e.tb003_complemento, ', sem complemento')
     )
     JOIN dim_tempo t ON t.data BETWEEN f.tb005_data_contratacao
-    AND f.tb005_data_demissao
+    AND IFNULL(f.tb005_data_demissao, '2024-01-01 00:00:00')
 GROUP BY
     t.tempo_id,
     dl.localidade_id,
