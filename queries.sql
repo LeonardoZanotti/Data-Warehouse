@@ -19,7 +19,8 @@ SELECT df.nome, dl.uf, dl.cidade, SUM(fv.quantidade) AS volume_vendas
 FROM fact_vendas fv
 JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
 JOIN dim_localidade dl ON fv.localidade_id = dl.localidade_id
-GROUP BY df.nome, dl.uf, dl.cidade;
+GROUP BY df.nome, dl.uf, dl.cidade
+ORDER BY df.nome;
 
 -- 4. Quantidade de atendimentos realizados por funcionário e localidade
 SELECT df.nome, dl.uf, dl.cidade, SUM(fa.quantidade_atendimentos) AS quantidade_atendimentos
