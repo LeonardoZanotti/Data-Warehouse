@@ -45,7 +45,6 @@ CREATE TABLE dim_cliente (
 
 -- Tabela Fato de Vendas
 CREATE TABLE fact_vendas (
-    tempo_id INT,
     localidade_id INT,
     produto_id INT,
     funcionario_id INT,
@@ -53,7 +52,9 @@ CREATE TABLE fact_vendas (
     quantidade INT,
     valor_unitario NUMERIC(12, 2),
     valor_total NUMERIC(12, 2),
-    FOREIGN KEY (tempo_id) REFERENCES dim_tempo(tempo_id),
+    ano INT,
+    mes INT,
+    dia INT,
     FOREIGN KEY (localidade_id) REFERENCES dim_localidade(localidade_id),
     FOREIGN KEY (produto_id) REFERENCES dim_produto(produto_id),
     FOREIGN KEY (funcionario_id) REFERENCES dim_funcionario(funcionario_id),
@@ -202,27 +203,30 @@ FROM
 
 INSERT INTO
     fact_vendas (
-        tempo_id,
         localidade_id,
         produto_id,
         funcionario_id,
         cliente_id,
         quantidade,
         valor_unitario,
-        valor_total
+        valor_total,
+        ano,
+        mes,
+        dia
     )
 SELECT
-    t.tempo_id,
     l.localidade_id,
     p.produto_id,
     v.tb005_matricula,
     c.cliente_id,
     v.tb010_012_quantidade AS quantidade,
     v.tb010_012_valor_unitario AS valor_unitario,
-    v.tb010_012_quantidade * v.tb010_012_valor_unitario AS valor_total
+    v.tb010_012_quantidade * v.tb010_012_valor_unitario AS valor_total,
+    YEAR(v.tb010_012_data),
+    MONTH(v.tb010_012_data),
+    DAY(v.tb010_012_data)
 FROM
     VAREJO_RELACIONAL.tb010_012_vendas v
-    JOIN dim_tempo t ON v.tb010_012_data = t.data
     JOIN (
         SELECT
             DISTINCT dp.tb012_cod_produto,
@@ -274,3 +278,46 @@ GROUP BY
     t.tempo_id,
     dl.localidade_id,
     f.tb005_matricula;
+
+
+
+-- Inserts para consultas
+
+-- 4. Quantidade de atendimentos realizados por funcionário e localidade
+INSERT INTO fact_atendimentos (funcionario_id, localidade_id, quantidade_atendimentos, tempo_id)
+SELECT 
+    df.funcionario_id,
+    dl.localidade_id,
+    SUM(fa.quantidade_atendimentos) AS quantidade_atendimentos,
+    NULL AS tempo_id
+FROM 
+    fact_atendimentos fa
+JOIN 
+    dim_funcionario df ON fa.funcionario_id = df.funcionario_id
+JOIN 
+    dim_localidade dl ON fa.localidade_id = dl.localidade_id
+GROUP BY 
+    df.funcionario_id, dl.localidade_id;
+
+-- 5. Valor das últimas (3) vendas realizadas por cliente
+-- Desnecessário
+
+-- 6. Clientes que mais compraram na loja virtual com valor acumulado por período
+INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
+SELECT 
+    dc.cliente_id,
+    SUM(fv.valor_total) AS valor_total,
+    NULL AS localidade_id,
+    NULL AS produto_id,
+    NULL AS funcionario_id,
+    NULL AS quantidade,
+    NULL AS valor_unitario,
+    fv.ano,
+    fv.mes,
+    NULL AS dia
+FROM 
+    fact_vendas fv
+JOIN 
+    dim_cliente dc ON fv.cliente_id = dc.cliente_id
+GROUP BY 
+    dc.cliente_id, fv.ano, fv.mes;
