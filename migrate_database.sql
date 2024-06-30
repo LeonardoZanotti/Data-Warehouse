@@ -10,9 +10,7 @@ CREATE TABLE dim_tempo (
     data DATE,
     ano INT,
     mes INT,
-    dia INT,
-    trimestre INT,
-    semestre INT
+    dia INT
 );
 
 -- Tabela Dimensional de Localidade
@@ -35,23 +33,14 @@ CREATE TABLE dim_produto (
 -- Tabela Dimensional de Funcionário
 CREATE TABLE dim_funcionario (
     funcionario_id INT PRIMARY KEY AUTO_INCREMENT,
-    nome VARCHAR(255),
-    data_nascimento DATE,
-    cpf VARCHAR(17),
-    rg VARCHAR(15),
-    status VARCHAR(20),
-    data_contratacao DATE,
-    data_demissao DATE,
-    loja_id INT
+    nome VARCHAR(255)
 );
 
 -- Tabela Dimensional de Cliente
 CREATE TABLE dim_cliente (
     cliente_id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(255),
-    cpf NUMERIC(15),
-    fone_residencial VARCHAR(255),
-    fone_celular VARCHAR(255)
+    cpf VARCHAR(17)
 );
 
 -- Tabela Fato de Vendas
@@ -89,14 +78,12 @@ USE VAREJO_DW;
 
 -- Inserir dados na tabela dim_tempo
 INSERT INTO
-    dim_tempo (data, ano, mes, dia, trimestre, semestre)
+    dim_tempo (data, ano, mes, dia)
 SELECT
     DISTINCT data,
     YEAR(data),
     MONTH(data),
-    DAY(data),
-    QUARTER(data),
-    IF(MONTH(data) <= 6, 1, 2)
+    DAY(data)
 FROM
     (
         SELECT
@@ -200,36 +187,18 @@ FROM
 
 -- Inserir dados na tabela dim_funcionario
 INSERT INTO
-    dim_funcionario (
-        nome,
-        data_nascimento,
-        cpf,
-        rg,
-        status,
-        data_contratacao,
-        data_demissao,
-        loja_id
-    )
+    dim_funcionario (nome)
 SELECT
-    f.tb005_nome_completo AS nome,
-    f.tb005_data_nascimento AS data_nascimento,
-    f.tb005_CPF AS cpf,
-    f.tb005_RG AS rg,
-    f.tb005_status AS status,
-    f.tb005_data_contratacao AS data_contratacao,
-    f.tb005_data_demissao AS data_demissao,
-    f.tb004_cod_loja AS loja_id
+    f.tb005_nome_completo AS nome
 FROM
     VAREJO_RELACIONAL.tb005_funcionarios f;
 
 -- Inserir dados na tabela dim_cliente
 INSERT INTO
-    dim_cliente (nome, cpf, fone_residencial, fone_celular)
+    dim_cliente (nome, cpf)
 SELECT
     c.tb010_nome AS nome,
-    c.tb010_cpf AS cpf,
-    c.tb010_fone_residencial AS fone_residencial,
-    c.tb010_fone_celular AS fone_celular
+    c.tb010_CPF AS cpf
 FROM
     VAREJO_RELACIONAL.tb010_clientes c;
 
@@ -257,7 +226,13 @@ FROM
     VAREJO_RELACIONAL.tb010_012_vendas v
     JOIN dim_tempo t ON v.tb010_012_data = t.data
     JOIN (
-        SELECT DISTINCT dp.tb012_cod_produto, MIN(dp.produto_id) AS produto_id FROM dim_produto dp GROUP BY dp.tb012_cod_produto
+        SELECT
+            DISTINCT dp.tb012_cod_produto,
+            MIN(dp.produto_id) AS produto_id
+        FROM
+            dim_produto dp
+        GROUP BY
+            dp.tb012_cod_produto
     ) p ON p.tb012_cod_produto = v.tb012_cod_produto
     JOIN VAREJO_RELACIONAL.tb005_funcionarios f2 ON v.tb005_matricula = f2.tb005_matricula
     JOIN VAREJO_RELACIONAL.tb004_lojas l ON f2.tb004_cod_loja = l.tb004_cod_loja
