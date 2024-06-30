@@ -45,7 +45,6 @@ CREATE TABLE dim_cliente (
 
 -- Tabela Fato de Vendas
 CREATE TABLE fact_vendas (
-    venda_id INT PRIMARY KEY AUTO_INCREMENT,
     tempo_id INT,
     localidade_id INT,
     produto_id INT,
@@ -63,7 +62,6 @@ CREATE TABLE fact_vendas (
 
 -- Tabela Fato de Atendimentos
 CREATE TABLE fact_atendimentos (
-    atendimento_id INT PRIMARY KEY AUTO_INCREMENT,
     tempo_id INT,
     localidade_id INT,
     funcionario_id INT,
