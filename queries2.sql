@@ -1,52 +1,64 @@
 USE VAREJO_DW2;
 
--- -- 1. Quantidade de vendas agrupada por tipo e categoria
--- SELECT
---     dp.tipo,
---     dp.categoria,
---     SUM(fv.quantidade) AS quantidade_vendas
--- FROM
---     fact_vendas fv
---     JOIN dim_produto dp ON fv.produto_id = dp.produto_id
--- GROUP BY
---     dp.tipo,
---     dp.categoria;
+-- 1. Quantidade de vendas agrupada por tipo e categoria
+SELECT
+    fv.tipo,
+    fv.categoria,
+    fv.quantidade AS quantidade_vendas
+FROM
+    fact_vendas fv
+WHERE
+    fv.cliente_id IS NULL
+    AND fv.localidade_id IS NULL
+    AND fv.produto_id IS NULL
+    AND fv.valor_total IS NULL
+    AND fv.valor_unitario IS NULL
+    AND fv.funcionario_id IS NULL
+    AND fv.ano IS NULL
+    AND fv.mes IS NULL
+    AND fv.dia IS NULL;
 
--- -- 2. Valor das vendas por funcionário, permitindo uma visão hierárquica por tempo
--- SELECT
---     df.nome,
---     dt.ano,
---     dt.mes,
---     SUM(fv.valor_total) AS valor_vendas
--- FROM
---     fact_vendas fv
---     JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
---     JOIN dim_tempo dt ON fv.tempo_id = dt.tempo_id
--- GROUP BY
---     df.nome,
---     dt.ano,
---     dt.mes
--- ORDER BY
---     df.nome,
---     dt.ano,
---     dt.mes;
+-- 2. Valor das vendas por funcionário, permitindo uma visão hierárquica por tempo
+SELECT
+    df.nome,
+    fv.ano,
+    fv.mes,
+    fv.valor_total AS valor_vendas
+FROM
+    fact_vendas fv
+    JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
+WHERE
+    fv.cliente_id IS NULL
+    AND fv.localidade_id IS NULL
+    AND fv.produto_id IS NULL
+    AND fv.valor_unitario IS NULL
+    AND fv.quantidade IS NULL
+    AND fv.dia IS NULL
+ORDER BY
+    df.nome,
+    fv.ano,
+    fv.mes;
 
--- -- 3. Volume das vendas por funcionário, permitindo uma visão por localidade
--- SELECT
---     df.nome,
---     dl.uf,
---     dl.cidade,
---     SUM(fv.quantidade) AS volume_vendas
--- FROM
---     fact_vendas fv
---     JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
---     JOIN dim_localidade dl ON fv.localidade_id = dl.localidade_id
--- GROUP BY
---     df.nome,
---     dl.uf,
---     dl.cidade
--- ORDER BY
---     df.nome;
+-- 3. Volume das vendas por funcionário, permitindo uma visão por localidade
+SELECT
+    df.nome,
+    dl.uf,
+    dl.cidade,
+    fv.quantidade AS volume_vendas
+FROM
+    fact_vendas fv
+    JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
+    JOIN dim_localidade dl ON fv.localidade_id = dl.localidade_id
+WHERE
+    fv.cliente_id IS NULL
+    AND fv.valor_total IS NULL
+    AND fv.produto_id IS NULL
+    AND fv.valor_unitario IS NULL
+    AND fv.ano IS NULL
+    AND fv.mes IS NULL
+    AND fv.dia IS NULL
+ORDER BY
+    df.nome;
 
 -- 4. Quantidade de atendimentos realizados por funcionário e localidade
 SELECT

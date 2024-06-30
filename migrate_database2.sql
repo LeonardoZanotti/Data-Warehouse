@@ -47,6 +47,8 @@ CREATE TABLE dim_cliente (
 CREATE TABLE fact_vendas (
     localidade_id INT,
     produto_id INT,
+    tipo VARCHAR(255),
+    categoria VARCHAR(255),
     funcionario_id INT,
     cliente_id INT,
     quantidade INT,
@@ -280,8 +282,65 @@ GROUP BY
     f.tb005_matricula;
 
 
-
 -- Inserts para consultas
+INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia, tipo, categoria)
+SELECT 
+    NULL AS cliente_id,
+    NULL AS valor_total,
+    NULL AS localidade_id,
+    NULL AS produto_id,
+    NULL AS funcionario_id,
+    SUM(fv.quantidade) AS quantidade,
+    NULL AS valor_unitario,
+    NULL AS ano,
+    NULL AS mes,
+    NULL AS dia,
+    dp.tipo AS tipo,
+    dp.categoria AS categoria
+FROM
+    fact_vendas fv
+    JOIN dim_produto dp ON fv.produto_id = dp.produto_id
+GROUP BY 
+    dp.tipo, dp.categoria;
+
+-- 2. Valor das vendas por funcionário, permitindo uma visão hierárquica por tempo
+INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
+SELECT 
+    NULL AS cliente_id,
+    SUM(fv.valor_total) AS valor_total,
+    NULL AS localidade_id,
+    NULL AS produto_id,
+    df.funcionario_id AS funcionario_id,
+    NULL AS quantidade,
+    NULL AS valor_unitario,
+    fv.ano,
+    fv.mes,
+    NULL AS dia
+FROM
+    fact_vendas fv
+    JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
+GROUP BY 
+    df.funcionario_id,fv.ano, fv.mes;
+
+-- 3. Volume das vendas por funcionário, permitindo uma visão por localidade
+INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
+SELECT 
+    NULL AS cliente_id,
+    NULL AS valor_total,
+    dl.localidade_id AS localidade_id,
+    NULL AS produto_id,
+    df.funcionario_id AS funcionario_id,
+    SUM(fv.quantidade) AS quantidade,
+    NULL AS valor_unitario,
+    NULL AS ano,
+    NULL AS mes,
+    NULL AS dia
+FROM
+    fact_vendas fv
+    JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
+    JOIN dim_localidade dl ON fv.localidade_id = dl.localidade_id
+GROUP BY 
+    dl.localidade_id, df.funcionario_id;
 
 -- 4. Quantidade de atendimentos realizados por funcionário e localidade
 INSERT INTO fact_atendimentos (funcionario_id, localidade_id, quantidade_atendimentos, tempo_id)
