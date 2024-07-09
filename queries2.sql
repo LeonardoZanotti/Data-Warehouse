@@ -2,11 +2,13 @@ USE VAREJO_DW2;
 
 -- 1. Quantidade de vendas agrupada por tipo e categoria
 SELECT
-    fv.tipo,
-    fv.categoria,
+    dt.tipo,
+    dc.categoria,
     fv.quantidade AS quantidade_vendas
 FROM
     fact_vendas fv
+    JOIN dim_tipo dt ON fv.tipo_id = dt.tipo_id
+    JOIN dim_categoria dc ON fv.categoria_id = dc.categoria_id
 WHERE
     fv.cliente_id IS NULL
     AND fv.localidade_id IS NULL
@@ -68,10 +70,8 @@ SELECT
     fa.quantidade_atendimentos
 FROM
     fact_atendimentos fa
-JOIN 
-    dim_funcionario df ON fa.funcionario_id = df.funcionario_id
-JOIN 
-    dim_localidade dl ON fa.localidade_id = dl.localidade_id
+    JOIN dim_funcionario df ON fa.funcionario_id = df.funcionario_id
+    JOIN dim_localidade dl ON fa.localidade_id = dl.localidade_id
 WHERE
     fa.tempo_id IS NULL
 ORDER BY
@@ -81,7 +81,10 @@ ORDER BY
 SELECT
     dc.nome,
     fv.valor_total,
-    STR_TO_DATE(CONCAT(fv.ano, '-', fv.mes, '-', fv.dia), '%Y-%m-%d') AS data
+    STR_TO_DATE(
+        CONCAT(fv.ano, '-', fv.mes, '-', fv.dia),
+        '%Y-%m-%d'
+    ) AS data
 FROM
     (
         SELECT
@@ -93,17 +96,24 @@ FROM
             ROW_NUMBER() OVER (
                 PARTITION BY fv.cliente_id
                 ORDER BY
-                    STR_TO_DATE(CONCAT(fv.ano, '-', fv.mes, '-', fv.dia), '%Y-%m-%d') DESC
+                    STR_TO_DATE(
+                        CONCAT(fv.ano, '-', fv.mes, '-', fv.dia),
+                        '%Y-%m-%d'
+                    ) DESC
             ) AS rn
         FROM
             fact_vendas fv
     ) fv
     JOIN dim_cliente dc ON fv.cliente_id = dc.cliente_id
 WHERE
-    fv.rn <= 3 AND fv.dia > 0
+    fv.rn <= 3
+    AND fv.dia > 0
 ORDER BY
     dc.nome,
-    STR_TO_DATE(CONCAT(fv.ano, '-', fv.mes, '-', fv.dia), '%Y-%m-%d') DESC;
+    STR_TO_DATE(
+        CONCAT(fv.ano, '-', fv.mes, '-', fv.dia),
+        '%Y-%m-%d'
+    ) DESC;
 
 -- 6. Clientes que mais compraram na loja virtual com valor acumulado por período
 SELECT

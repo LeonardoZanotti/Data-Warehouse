@@ -21,13 +21,25 @@ CREATE TABLE dim_localidade (
     endereco VARCHAR(255)
 );
 
+CREATE TABLE dim_tipo (
+    tipo_id INT PRIMARY KEY AUTO_INCREMENT,
+    tipo VARCHAR(255)
+);
+
+CREATE TABLE dim_categoria (
+    categoria_id INT PRIMARY KEY AUTO_INCREMENT,
+    categoria VARCHAR(255)
+);
+
 -- Tabela Dimensional de Produto
 CREATE TABLE dim_produto (
     produto_id INT PRIMARY KEY AUTO_INCREMENT,
-    tipo VARCHAR(255),
-    categoria VARCHAR(255),
+    tipo_id INT,
+    categoria_id INT,
     descricao VARCHAR(255),
-    tb012_cod_produto INT
+    tb012_cod_produto INT,
+    FOREIGN KEY (tipo_id) REFERENCES dim_tipo(tipo_id),
+    FOREIGN KEY (categoria_id) REFERENCES dim_categoria(categoria_id)
 );
 
 -- Tabela Dimensional de Funcionário
@@ -47,8 +59,8 @@ CREATE TABLE dim_cliente (
 CREATE TABLE fact_vendas (
     localidade_id INT,
     produto_id INT,
-    tipo VARCHAR(255),
-    categoria VARCHAR(255),
+    tipo_id INT,
+    categoria_id INT,
     funcionario_id INT,
     cliente_id INT,
     quantidade INT,
@@ -60,7 +72,9 @@ CREATE TABLE fact_vendas (
     FOREIGN KEY (localidade_id) REFERENCES dim_localidade(localidade_id),
     FOREIGN KEY (produto_id) REFERENCES dim_produto(produto_id),
     FOREIGN KEY (funcionario_id) REFERENCES dim_funcionario(funcionario_id),
-    FOREIGN KEY (cliente_id) REFERENCES dim_cliente(cliente_id)
+    FOREIGN KEY (cliente_id) REFERENCES dim_cliente(cliente_id),
+    FOREIGN KEY (tipo_id) REFERENCES dim_tipo(tipo_id),
+    FOREIGN KEY (categoria_id) REFERENCES dim_categoria(categoria_id)
 );
 
 -- Tabela Fato de Atendimentos
@@ -125,12 +139,31 @@ FROM
     VAREJO_RELACIONAL.tb003_enderecos e
     JOIN VAREJO_RELACIONAL.tb002_cidades c ON e.tb002_cod_cidade = c.tb002_cod_cidade;
 
+INSERT INTO
+    dim_tipo (tipo)
+VALUES
+    ('Alimento'),
+    ('Eletrodoméstico'),
+    ('Vestuário');
+
+INSERT INTO
+    dim_categoria (categoria)
+SELECT
+    c.tb013_descricao
+FROM
+    VAREJO_RELACIONAL.tb013_categorias c;
+
 -- Inserir dados na tabela dim_produto
 INSERT INTO
-    dim_produto (tipo, categoria, descricao, tb012_cod_produto)
+    dim_produto (
+        tipo_id,
+        categoria_id,
+        descricao,
+        tb012_cod_produto
+    )
 SELECT
-    'Alimento' AS tipo,
-    c.tb013_descricao AS categoria,
+    t.tipo_id,
+    cat.categoria_id,
     CONCAT(
         p.tb012_descricao,
         ' ',
@@ -145,12 +178,14 @@ SELECT
     p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb014_prd_alimentos a
+    JOIN dim_tipo t ON t.tipo = 'Alimento'
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON a.tb012_cod_produto = p.tb012_cod_produto
     JOIN VAREJO_RELACIONAL.tb013_categorias c ON p.tb013_cod_categoria = c.tb013_cod_categoria
+    JOIN dim_categoria cat ON c.tb013_descricao = cat.categoria
 UNION
 SELECT
-    'Eletrodoméstico' AS tipo,
-    c.tb013_descricao AS categoria,
+    t.tipo_id,
+    cat.categoria_id,
     CONCAT(
         p.tb012_descricao,
         ' ',
@@ -163,12 +198,14 @@ SELECT
     p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb015_prd_eletros e
+    JOIN dim_tipo t ON t.tipo = 'Eletrodoméstico'
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON e.tb012_cod_produto = p.tb012_cod_produto
     JOIN VAREJO_RELACIONAL.tb013_categorias c ON p.tb013_cod_categoria = c.tb013_cod_categoria
+    JOIN dim_categoria cat ON c.tb013_descricao = cat.categoria
 UNION
 SELECT
-    'Vestuário' AS tipo,
-    c.tb013_descricao AS categoria,
+    t.tipo_id,
+    cat.categoria_id,
     CONCAT(
         p.tb012_descricao,
         ' ',
@@ -183,8 +220,10 @@ SELECT
     p.tb012_cod_produto
 FROM
     VAREJO_RELACIONAL.tb016_prd_vestuarios v
+    JOIN dim_tipo t ON t.tipo = 'Vestuário'
     JOIN VAREJO_RELACIONAL.tb012_produtos p ON v.tb012_cod_produto = p.tb012_cod_produto
-    JOIN VAREJO_RELACIONAL.tb013_categorias c ON p.tb013_cod_categoria = c.tb013_cod_categoria;
+    JOIN VAREJO_RELACIONAL.tb013_categorias c ON p.tb013_cod_categoria = c.tb013_cod_categoria
+    JOIN dim_categoria cat ON c.tb013_descricao = cat.categoria;
 
 -- Inserir dados na tabela dim_funcionario
 INSERT INTO
@@ -281,10 +320,23 @@ GROUP BY
     dl.localidade_id,
     f.tb005_matricula;
 
-
 -- Inserts para consultas
-INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia, tipo, categoria)
-SELECT 
+INSERT INTO
+    fact_vendas (
+        cliente_id,
+        valor_total,
+        localidade_id,
+        produto_id,
+        funcionario_id,
+        quantidade,
+        valor_unitario,
+        ano,
+        mes,
+        dia,
+        tipo_id,
+        categoria_id
+    )
+SELECT
     NULL AS cliente_id,
     NULL AS valor_total,
     NULL AS localidade_id,
@@ -295,17 +347,30 @@ SELECT
     NULL AS ano,
     NULL AS mes,
     NULL AS dia,
-    dp.tipo AS tipo,
-    dp.categoria AS categoria
+    dp.tipo_id AS tipo_id,
+    dp.categoria_id AS categoria_id
 FROM
     fact_vendas fv
     JOIN dim_produto dp ON fv.produto_id = dp.produto_id
-GROUP BY 
-    dp.tipo, dp.categoria;
+GROUP BY
+    dp.tipo_id,
+    dp.categoria_id;
 
 -- 2. Valor das vendas por funcionário, permitindo uma visão hierárquica por tempo
-INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
-SELECT 
+INSERT INTO
+    fact_vendas (
+        cliente_id,
+        valor_total,
+        localidade_id,
+        produto_id,
+        funcionario_id,
+        quantidade,
+        valor_unitario,
+        ano,
+        mes,
+        dia
+    )
+SELECT
     NULL AS cliente_id,
     SUM(fv.valor_total) AS valor_total,
     NULL AS localidade_id,
@@ -319,12 +384,26 @@ SELECT
 FROM
     fact_vendas fv
     JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
-GROUP BY 
-    df.funcionario_id,fv.ano, fv.mes;
+GROUP BY
+    df.funcionario_id,
+    fv.ano,
+    fv.mes;
 
 -- 3. Volume das vendas por funcionário, permitindo uma visão por localidade
-INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
-SELECT 
+INSERT INTO
+    fact_vendas (
+        cliente_id,
+        valor_total,
+        localidade_id,
+        produto_id,
+        funcionario_id,
+        quantidade,
+        valor_unitario,
+        ano,
+        mes,
+        dia
+    )
+SELECT
     NULL AS cliente_id,
     NULL AS valor_total,
     dl.localidade_id AS localidade_id,
@@ -339,31 +418,48 @@ FROM
     fact_vendas fv
     JOIN dim_funcionario df ON fv.funcionario_id = df.funcionario_id
     JOIN dim_localidade dl ON fv.localidade_id = dl.localidade_id
-GROUP BY 
-    dl.localidade_id, df.funcionario_id;
+GROUP BY
+    dl.localidade_id,
+    df.funcionario_id;
 
 -- 4. Quantidade de atendimentos realizados por funcionário e localidade
-INSERT INTO fact_atendimentos (funcionario_id, localidade_id, quantidade_atendimentos, tempo_id)
-SELECT 
+INSERT INTO
+    fact_atendimentos (
+        funcionario_id,
+        localidade_id,
+        quantidade_atendimentos,
+        tempo_id
+    )
+SELECT
     df.funcionario_id,
     dl.localidade_id,
     SUM(fa.quantidade_atendimentos) AS quantidade_atendimentos,
     NULL AS tempo_id
-FROM 
+FROM
     fact_atendimentos fa
-JOIN 
-    dim_funcionario df ON fa.funcionario_id = df.funcionario_id
-JOIN 
-    dim_localidade dl ON fa.localidade_id = dl.localidade_id
-GROUP BY 
-    df.funcionario_id, dl.localidade_id;
+    JOIN dim_funcionario df ON fa.funcionario_id = df.funcionario_id
+    JOIN dim_localidade dl ON fa.localidade_id = dl.localidade_id
+GROUP BY
+    df.funcionario_id,
+    dl.localidade_id;
 
 -- 5. Valor das últimas (3) vendas realizadas por cliente
 -- Desnecessário
-
 -- 6. Clientes que mais compraram na loja virtual com valor acumulado por período
-INSERT INTO fact_vendas (cliente_id, valor_total, localidade_id, produto_id, funcionario_id, quantidade, valor_unitario, ano, mes, dia)
-SELECT 
+INSERT INTO
+    fact_vendas (
+        cliente_id,
+        valor_total,
+        localidade_id,
+        produto_id,
+        funcionario_id,
+        quantidade,
+        valor_unitario,
+        ano,
+        mes,
+        dia
+    )
+SELECT
     dc.cliente_id,
     SUM(fv.valor_total) AS valor_total,
     NULL AS localidade_id,
@@ -374,9 +470,10 @@ SELECT
     fv.ano,
     fv.mes,
     NULL AS dia
-FROM 
+FROM
     fact_vendas fv
-JOIN 
-    dim_cliente dc ON fv.cliente_id = dc.cliente_id
-GROUP BY 
-    dc.cliente_id, fv.ano, fv.mes;
+    JOIN dim_cliente dc ON fv.cliente_id = dc.cliente_id
+GROUP BY
+    dc.cliente_id,
+    fv.ano,
+    fv.mes;
